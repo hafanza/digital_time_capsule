@@ -39,22 +39,33 @@ class _HomeScreenState extends State<HomeScreen> {
     _organizeCapsules();
   }
 
+  // --- PERBAIKAN LOGIKA IMAGE OTOMATIS ---
   void _organizeCapsules() {
     final now = DateTime.now();
+
     setState(() {
       lockedList.clear();
       unlockedList.clear();
 
       for (var capsule in allCapsules) {
         DateTime unlockTime = DateTime.parse(capsule['unlockDate']);
+
+        // Hitung teks tampilan (Days Left / Opened Ago)
         capsule['timeDisplay'] = _calculateTimeDisplay(unlockTime);
 
+        // LOGIKA BARU: Cek waktu untuk menentukan masuk mana & update gambarnya
         if (unlockTime.isAfter(now)) {
+          // --- KONDISI LOCKED ---
+          capsule['image'] = "assets/asset5.png"; // Paksa jadi Gambar Locked
           lockedList.add(capsule);
         } else {
+          // --- KONDISI UNLOCKED ---
+          capsule['image'] = "assets/asset6.png"; // Paksa jadi Gambar Unlocked
           unlockedList.add(capsule);
         }
       }
+
+      // Sorting (Urutan)
       lockedList.sort((a, b) => DateTime.parse(a['unlockDate']).compareTo(DateTime.parse(b['unlockDate'])));
       unlockedList.sort((a, b) => DateTime.parse(b['unlockDate']).compareTo(DateTime.parse(a['unlockDate'])));
     });

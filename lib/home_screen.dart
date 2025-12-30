@@ -1,8 +1,9 @@
 import 'create_capsule_screen.dart';
 import 'edit_capsule_screen.dart';
 import 'login_screen.dart';
-import 'open_capsule_screen.dart'; // <--- JANGAN LUPA IMPORT INI
+import 'open_capsule_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
@@ -14,19 +15,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // DATA MASTER
-  List<Map<String, dynamic>> allCapsules = [
-    {
-      "message": "Halo masa depan! Semoga kamu sudah lulus.",
-      "image": "assets/asset5.png",
-      "unlockDate": DateTime.now().add(const Duration(days: 2)).toIso8601String(),
-    },
-    {
-      "message": "Ini kenangan saat belajar Flutter pertama kali.",
-      "image": "assets/asset6.png",
-      "unlockDate": DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-    },
-  ];
+  late Box capsuleBox;
+  List<Map<String, dynamic>> allCapsules = [];
 
   List<Map<String, dynamic>> lockedList = [];
   List<Map<String, dynamic>> unlockedList = [];
@@ -36,10 +26,46 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _organizeCapsules();
+    capsuleBox = Hive.box('capsuleBox');
+    _loadCapsules();
   }
 
-  // --- PERBAIKAN LOGIKA IMAGE OTOMATIS ---
+  void _loadCapsules() {
+    final rawData = capsuleBox.get('list');
+
+    if (rawData != null) {
+      setState(() {
+        allCapsules = List<Map<String, dynamic>>.from(
+            rawData.map((item) => Map<String, dynamic>.from(item))
+        );
+        _organizeCapsules();
+      });
+    } else {
+      allCapsules = [
+        {
+          "id": "default1",
+          "message": "Halo masa depan! Semoga kamu sudah lulus.",
+          "image": "assets/asset5.png",
+          "unlockDate": DateTime.now().add(const Duration(days: 2)).toIso8601String(),
+        },
+        {
+          "id": "default2",
+          "message": "Ini contoh Capsule saja.",
+          "image": "assets/asset6.png",
+          "unlockDate": DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+        },
+      ];
+      _saveCapsules();
+      _organizeCapsules();
+    }
+  }
+
+  // --- PERBAIKAN: Ditambahkan async dan flush agar data permanen ---
+  Future<void> _saveCapsules() async {
+    await capsuleBox.put('list', allCapsules);
+    await capsuleBox.flush(); // Memaksa data ditulis ke penyimpanan
+  }
+
   void _organizeCapsules() {
     final now = DateTime.now();
 
@@ -49,54 +75,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
       for (var capsule in allCapsules) {
         DateTime unlockTime = DateTime.parse(capsule['unlockDate']);
-
-        // Hitung teks tampilan (Days Left / Opened Ago)
         capsule['timeDisplay'] = _calculateTimeDisplay(unlockTime);
 
-        // LOGIKA BARU: Cek waktu untuk menentukan masuk mana & update gambarnya
         if (unlockTime.isAfter(now)) {
-          // --- KONDISI LOCKED ---
-          capsule['image'] = "assets/asset5.png"; // Paksa jadi Gambar Locked
+          capsule['image'] = "assets/asset5.png";
           lockedList.add(capsule);
         } else {
-          // --- KONDISI UNLOCKED ---
-          capsule['image'] = "assets/asset6.png"; // Paksa jadi Gambar Unlocked
+          capsule['image'] = "assets/asset6.png";
           unlockedList.add(capsule);
         }
       }
 
-      // Sorting (Urutan)
       lockedList.sort((a, b) => DateTime.parse(a['unlockDate']).compareTo(DateTime.parse(b['unlockDate'])));
       unlockedList.sort((a, b) => DateTime.parse(b['unlockDate']).compareTo(DateTime.parse(a['unlockDate'])));
     });
   }
 
-  // --- PERBAIKAN LOGIKA WAKTU (GANTI TOTAL FUNGSI INI) ---
   String _calculateTimeDisplay(DateTime targetTime) {
     final now = DateTime.now();
-
-    // Kita "bersihkan" jam-nya, jadi murni hitung selisih tanggal kalender
     final todayMidnight = DateTime(now.year, now.month, now.day);
     final targetMidnight = DateTime(targetTime.year, targetTime.month, targetTime.day);
 
     final difference = targetMidnight.difference(todayMidnight);
 
     if (difference.isNegative) {
-      // MASA LALU
       final daysAgo = difference.abs().inDays;
-      if (daysAgo == 0) return "Opened Today"; // Jika hari ini tapi sudah lewat jam
+      if (daysAgo == 0) return "Opened Today";
       return "Opened $daysAgo days ago";
     } else {
-      // MASA DEPAN
       final daysLeft = difference.inDays;
-
       if (daysLeft == 0) {
-        // Jika harinya sama (Hari ini), kita hitung sisa jam
         final hoursLeft = targetTime.difference(now).inHours;
         if (hoursLeft <= 0) return "Ready to Open!";
         return "$hoursLeft Hours Remaining";
       }
-
       return "$daysLeft Days Remaining";
     }
   }
@@ -117,7 +129,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // TOMBOL ADD
                 GestureDetector(
                   onTap: () async {
                     final result = await Navigator.push(
@@ -126,12 +137,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
 
                     if (result != null) {
-                      allCapsules.add({
-                        "message": result['message'],
-                        "image": "assets/asset5.png",
-                        "unlockDate": result['date'].toIso8601String(),
+                      setState(() {
+                        allCapsules.add({
+                          "id": result['id'],
+                          "message": result['message'],
+                          "image": "assets/asset5.png",
+                          "unlockDate": (result['date'] as DateTime).toIso8601String(),
+                        });
+                        _saveCapsules();
+                        _organizeCapsules();
                       });
-                      _organizeCapsules();
                     }
                   },
                   child: Container(
@@ -149,30 +164,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 const SizedBox(height: 20),
-
-                // LIST LOCKED
-                _buildCapsuleList(
-                    dataList: lockedList,
-                    selectedIndex: _selectedLockedIndex,
-                    isLockedList: true
-                ),
-
+                _buildCapsuleList(dataList: lockedList, selectedIndex: _selectedLockedIndex, isLockedList: true),
                 const SizedBox(height: 20),
-
-                // PREVIEW AREA (Updated)
-                SizedBox(
-                  height: 300,
-                  child: _buildPreviewArea(),
-                ),
-
+                SizedBox(height: 300, child: _buildPreviewArea()),
                 const SizedBox(height: 20),
-
-                // LIST UNLOCKED
-                _buildCapsuleList(
-                    dataList: unlockedList,
-                    selectedIndex: _selectedUnlockedIndex,
-                    isLockedList: false
-                ),
+                _buildCapsuleList(dataList: unlockedList, selectedIndex: _selectedUnlockedIndex, isLockedList: false),
 
                 const SizedBox(height: 10),
                 TextButton(
@@ -187,18 +183,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCapsuleList({
-    required List<Map<String, dynamic>> dataList,
-    required int selectedIndex,
-    required bool isLockedList,
-  }) {
+  Widget _buildCapsuleList({required List<Map<String, dynamic>> dataList, required int selectedIndex, required bool isLockedList}) {
     return Container(
       height: 110,
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.white54),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(border: Border.all(color: Colors.white54), borderRadius: BorderRadius.circular(8)),
       child: dataList.isEmpty
           ? const Center(child: Text("Empty", style: TextStyle(color: Colors.white30, fontFamily: 'VT323')))
           : ListView.builder(
@@ -245,14 +234,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- LOGIKA UTAMA DI SINI ---
-  // --- GANTI BAGIAN INI SAJA ---
   Widget _buildPreviewArea() {
     Map<String, dynamic>? activeData;
     bool isLocked = false;
     int activeIndex = -1;
 
-    // Cek mana yang sedang dipilih
     if (_selectedLockedIndex != -1 && _selectedLockedIndex < lockedList.length) {
       activeData = lockedList[_selectedLockedIndex];
       isLocked = true;
@@ -263,17 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
       activeIndex = _selectedUnlockedIndex;
     }
 
-    // Jika belum ada yang dipilih
     if (activeData == null) {
-      return const Center(
-        child: Text(
-          "Pilih capsule untuk melihat detail",
-          style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 18),
-        ),
-      );
+      return const Center(child: Text("Pilih capsule untuk melihat detail", style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 18)));
     }
 
-    // Tentukan Warna Shadow (Biru jika Locked, Emas jika Unlocked)
     Color glowColor = isLocked ? Colors.blueAccent : Colors.amber;
 
     return Column(
@@ -282,146 +261,51 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Tombol Edit (Hanya jika Locked)
-            isLocked
-                ? IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white),
-              onPressed: () => _editCapsule(activeData!, activeIndex),
-            )
-                : const SizedBox(width: 48),
-
-            // --- GAMBAR CAPSULE UTAMA (INTERAKTIF) ---
+            isLocked ? IconButton(icon: const Icon(Icons.edit, color: Colors.white), onPressed: () => _editCapsule(activeData!, activeIndex)) : const SizedBox(width: 48),
             GestureDetector(
               onTap: () {
                 if (isLocked) {
-                  // Feedback jika masih terkunci
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Sabar ya! Belum waktunya dibuka.", style: TextStyle(fontFamily: 'VT323')),
-                      duration: Duration(seconds: 1),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Sabar ya! Belum waktunya dibuka.", style: TextStyle(fontFamily: 'VT323')), backgroundColor: Colors.redAccent));
                 } else {
-                  // Buka surat jika sudah Unlocked
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OpenCapsuleScreen(
-                        message: activeData!['message'],
-                        dateInfo: activeData['timeDisplay'],
-                      ),
-                    ),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => OpenCapsuleScreen(message: activeData!['message'], dateInfo: activeData['timeDisplay'])));
                 }
               },
               child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  // Efek Glowing berbeda tergantung status
-                  boxShadow: [
-                    BoxShadow(
-                      color: glowColor.withOpacity(0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    )
-                  ],
-                ),
-                // Animasi kecil saat ditekan bisa ditambahkan nanti, sementara image biasa
+                decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: glowColor.withValues(alpha: 0.3), blurRadius: 30, spreadRadius: 5)]),
                 child: Image.asset(activeData['image']!, width: 120),
               ),
             ),
-
-            // Tombol Delete
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.redAccent),
-              onPressed: () => _showDeleteDialog(context, activeData!, isLocked),
-            ),
+            IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), onPressed: () => _showDeleteDialog(context, activeData!, isLocked)),
           ],
         ),
-
         const SizedBox(height: 20),
-
-        Text(
-          isLocked ? "LOCKED" : "UNLOCKED",
-          style: TextStyle(
-            color: isLocked ? Colors.white : Colors.amber, // Teks jadi emas kalau unlocked
-            fontSize: 32,
-            fontFamily: 'VT323',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
+        Text(isLocked ? "LOCKED" : "UNLOCKED", style: TextStyle(color: isLocked ? Colors.white : Colors.amber, fontSize: 32, fontFamily: 'VT323', fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
-
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white30),
-            color: Colors.black26,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            activeData['timeDisplay']!,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'VT323'),
-          ),
+          decoration: BoxDecoration(border: Border.all(color: Colors.white30), color: Colors.black26, borderRadius: BorderRadius.circular(4)),
+          child: Text(activeData['timeDisplay']!, style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'VT323')),
         ),
-
-        const SizedBox(height: 15),
-
-        // --- KETERANGAN / PETUNJUK ---
-        if (!isLocked)
-        // Keterangan untuk Unlocked
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.touch_app, color: Colors.greenAccent, size: 18),
-              SizedBox(width: 5),
-              Text(
-                "Tap capsule to read message",
-                style: TextStyle(
-                    color: Colors.greenAccent,
-                    fontFamily: 'VT323',
-                    fontSize: 16,
-                    letterSpacing: 1.2
-                ),
-              ),
-            ],
-          )
-        else
-        // Keterangan untuk Locked
-          const Text(
-            "( Waiting for the future... )",
-            style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 14, fontStyle: FontStyle.italic),
-          ),
       ],
     );
   }
 
-  // --- Fungsi Edit, Delete, Logout tetap sama seperti sebelumnya ---
-  // (Saya singkat biar tidak kepanjangan di chat, tapi pastikan copy method yang lama ya)
-
   void _editCapsule(Map<String, dynamic> capsuleData, int index) async {
-    final updatedData = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditCapsuleScreen(
-          initialMessage: capsuleData['message'],
-          initialDateDisplay: capsuleData['timeDisplay'], // Ganti nama parameter biar jelas
-          initialRawDate: capsuleData['unlockDate'],      // TAMBAHAN: Kirim tanggal asli ISO String
-        ),
-      ),
-    );
+    final updatedData = await Navigator.push(context, MaterialPageRoute(builder: (context) => EditCapsuleScreen(initialMessage: capsuleData['message'], initialDateDisplay: capsuleData['timeDisplay'], initialRawDate: capsuleData['unlockDate'])));
     if (updatedData != null) {
       setState(() {
-        allCapsules.remove(capsuleData);
-        allCapsules.add({
-          "message": updatedData['message'],
-          "image": capsuleData['image'],
-          "unlockDate": updatedData['time'] ?? capsuleData['unlockDate'],
-        });
-        _organizeCapsules();
-        _selectedLockedIndex = -1;
+        int masterIndex = allCapsules.indexWhere((c) => c['id'] == capsuleData['id']);
+        if (masterIndex != -1) {
+          allCapsules[masterIndex] = {
+            "id": capsuleData['id'],
+            "message": updatedData['message'],
+            "image": capsuleData['image'],
+            "unlockDate": updatedData['time'] ?? capsuleData['unlockDate'],
+          };
+          _saveCapsules();
+          _organizeCapsules();
+          _selectedLockedIndex = -1;
+        }
       });
     }
   }
@@ -433,14 +317,12 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF333333),
         title: const Text("Delete?", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Batal", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal", style: TextStyle(color: Colors.white, fontFamily: 'VT323'))),
           TextButton(
             onPressed: () {
               setState(() {
-                allCapsules.remove(itemToDelete);
+                allCapsules.removeWhere((c) => c['id'] == itemToDelete['id']);
+                _saveCapsules();
                 _organizeCapsules();
                 _selectedLockedIndex = -1;
                 _selectedUnlockedIndex = -1;
@@ -461,17 +343,10 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF333333),
         title: const Text("Logout", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Batal", style: TextStyle(color: Colors.grey, fontFamily: 'VT323')),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal", style: TextStyle(color: Colors.grey, fontFamily: 'VT323'))),
           TextButton(
             onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-              );
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
             },
             child: const Text("Keluar", style: TextStyle(color: Colors.red, fontFamily: 'VT323')),
           ),

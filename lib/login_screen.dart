@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -13,7 +14,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
-  void _handleLogin() {
+  // <--- Fungsi diubah menjadi async untuk cek database Hive --->
+  Future<void> _handleLogin() async {
     String username = _usernameController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -26,11 +28,24 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Login Sukses
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeScreen(username: username)),
-    );
+    var userBox = Hive.box('userBox');
+    String? registeredUsername = userBox.get('username');
+    String? registeredPassword = userBox.get('password');
+
+    if (registeredUsername == null) {
+      _showWarning("Akun tidak ditemukan! Silakan daftar dahulu.", Colors.orangeAccent);
+      return;
+    }
+
+    if (username == registeredUsername && password == registeredPassword) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(username: username)),
+      );
+    } else {
+      _showWarning("Username atau Password salah!", Colors.redAccent);
+    }
   }
 
   void _showWarning(String pesan, Color warna) {
@@ -46,15 +61,14 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF222222), // Warna background Home Screen
+      backgroundColor: const Color(0xFF222222),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 1. ICON SEDERHANA (Sesuai aset Pixel Art)
-              Image.asset('assets/asset5.png', width: 100), // Gambar Capsule Locked
+              Image.asset('assets/asset5.png', width: 100),
 
               const SizedBox(height: 20),
 
@@ -73,11 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 40),
 
-              // 2. FORM INPUT (Gaya Home Screen: Border Putih)
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2D2D2D), // Warna kartu di Home Screen
+                  color: const Color(0xFF2D2D2D),
                   border: Border.all(color: Colors.white54),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -111,17 +124,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 30),
 
-              // 3. TOMBOL LOGIN (Hijau Pixel Art)
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50), // Hijau standar pixel art
+                    backgroundColor: const Color(0xFF4CAF50),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8), // Sama dengan tombol Home
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    side: const BorderSide(color: Colors.white, width: 1), // Border putih tipis
+                    side: const BorderSide(color: Colors.white, width: 1),
                   ),
                   onPressed: _handleLogin,
                   child: const Text(
@@ -133,7 +145,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // 4. TEXT BUTTON REGISTER
               TextButton(
                 onPressed: () {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
@@ -150,7 +161,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Helper Style Input yang Bersih & Senada dengan Home
   InputDecoration _simpleInputDecoration({required String hint, bool isPassword = false}) {
     return InputDecoration(
       hintText: hint,
@@ -162,10 +172,9 @@ class _LoginScreenState extends State<LoginScreen> {
       )
           : null,
       filled: true,
-      fillColor: const Color(0xFF222222), // Input lebih gelap dari card
+      fillColor: const Color(0xFF222222),
       contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
 
-      // Border Putih Biasa
       enabledBorder: OutlineInputBorder(
         borderSide: const BorderSide(color: Colors.white30),
         borderRadius: BorderRadius.circular(4),

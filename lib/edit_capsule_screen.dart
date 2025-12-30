@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 
 class EditCapsuleScreen extends StatefulWidget {
   final String initialMessage;
-  final String initialDateDisplay; // Teks tampilan (misal "3 Days Left")
-  final String? initialRawDate;    // Tanggal asli (ISO String)
+  final String initialDateDisplay;
+  final String? initialRawDate;
 
   const EditCapsuleScreen({
     super.key,
@@ -25,7 +25,6 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
   @override
   void initState() {
     super.initState();
-    // Jika ada tanggal asli dari Home, kita pasang ke variabel _selectedDate
     if (widget.initialRawDate != null) {
       try {
         _selectedDate = DateTime.parse(widget.initialRawDate!);
@@ -45,7 +44,7 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
     final now = DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now, // Buka kalender di tanggal yang sudah dipilih
+      initialDate: _selectedDate ?? now,
       firstDate: now,
       lastDate: DateTime(2100),
       builder: (context, child) {
@@ -57,7 +56,7 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
               surface: Color(0xFFFFF8E1),
               onSurface: Colors.brown,
             ),
-            dialogBackgroundColor: const Color(0xFFFFF8E1),
+            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFFFFF8E1)),
           ),
           child: child!,
         );
@@ -73,7 +72,6 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
 
     Navigator.pop(context, {
       'message': finalMessage,
-      // Kirim balik tanggal dalam format ISO String
       'time': _selectedDate != null ? _selectedDate!.toIso8601String() : widget.initialRawDate,
     });
 
@@ -107,14 +105,17 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                 color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(5),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(4, 4))
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3), // PERBAIKAN SINTAKS
+                      blurRadius: 10,
+                      offset: const Offset(4, 4)
+                  )
                 ],
                 border: Border.all(color: const Color(0xFFD7CCC8), width: 2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- BAGIAN TANGGAL ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -153,12 +154,9 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 15),
                   const Divider(color: Colors.brown, thickness: 1.5),
                   const SizedBox(height: 15),
-
-                  // --- HIDDEN CONTENT ---
                   if (!_isOverwriting)
                     Container(
                       width: double.infinity,
@@ -177,8 +175,6 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                         ],
                       ),
                     ),
-
-                  // --- INPUT OVERWRITE ---
                   const Text("OVERWRITE MESSAGE?", style: TextStyle(color: Colors.brown, fontFamily: 'VT323', fontSize: 16)),
                   TextField(
                     controller: _messageController,
@@ -193,7 +189,6 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                       border: OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
                     ),
                   ),
-
                   if (_isOverwriting)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -208,9 +203,7 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 30),
-
             Row(
               children: [
                 Expanded(

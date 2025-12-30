@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart'; // <--- PERUBAHAN 1: Import Hive
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,7 +13,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
-  void _handleRegister() {
+  // <--- PERUBAHAN 2: Fungsi diubah menjadi async untuk proses simpan --->
+  Future<void> _handleRegister() async {
     String name = _nameController.text.trim();
     String username = _usernameController.text.trim();
     String password = _passwordController.text.trim();
@@ -25,6 +27,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _showWarning("Username harus diawali '@'", Colors.orangeAccent);
       return;
     }
+
+    var userBox = Hive.box('userBox');
+    await userBox.put('name', name);
+    await userBox.put('username', username);
+    await userBox.put('password', password);
+    await userBox.flush();
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -47,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF222222), // Konsisten dengan Login & Home
+      backgroundColor: const Color(0xFF222222),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -70,7 +80,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 30),
 
-              // 2. FORM CARD (Sama seperti Login)
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -81,18 +90,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // INPUT NAMA
                     const Text("Nama Lengkap", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
                     const SizedBox(height: 5),
                     TextField(
                       controller: _nameController,
                       style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
-                      decoration: _simpleInputDecoration(hint: "Nama Kamu"),
+                      decoration: _simpleInputDecoration(hint: " Tuliskan Nama Kamu"),
                     ),
 
                     const SizedBox(height: 15),
 
-                    // INPUT USERNAME
                     const Text("Username", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
                     const SizedBox(height: 5),
                     TextField(
@@ -121,13 +128,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 30),
 
-              // 3. TOMBOL REGISTER
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50), // Hijau Pixel Art
+                    backgroundColor: const Color(0xFF4CAF50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -158,7 +164,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Helper Decoration (Sama persis dengan Login Screen)
   InputDecoration _simpleInputDecoration({required String hint, bool isPassword = false}) {
     return InputDecoration(
       hintText: hint,
@@ -170,7 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       )
           : null,
       filled: true,
-      fillColor: const Color(0xFF222222), // Input lebih gelap
+      fillColor: const Color(0xFF222222),
       contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
       enabledBorder: OutlineInputBorder(
         borderSide: const BorderSide(color: Colors.white30),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math; // Untuk animasi floating
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,11 +15,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    // Konfigurasi Animasi Floating (Naik Turun)
     _controller = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
-    )..repeat(reverse: true); // Ulangi bolak-balik
+    )..repeat(reverse: true);
 
     _animation = Tween<double>(begin: 0, end: 15).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -42,26 +40,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            // Warna langit malam gradasi
             colors: [Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460)],
           ),
         ),
         child: Stack(
           children: [
-            // 1. DEKORASI BINTANG (Background)
             Positioned(top: 50, left: 40, child: _buildStar(2)),
             Positioned(top: 100, right: 30, child: _buildStar(3)),
             Positioned(top: 150, left: 150, child: _buildStar(2)),
             Positioned(top: 80, left: 250, child: _buildStar(4)),
             Positioned(top: 200, right: 80, child: _buildStar(2)),
 
-            // 2. KONTEN UTAMA
             Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const SizedBox(height: 80),
 
-                // --- JUDUL ---
                 Column(
                   children: const [
                     Text(
@@ -80,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       'TIME CAPSULE',
                       style: TextStyle(
                           fontSize: 40,
-                          color: Colors.amber, // Warna emas biar kontras
+                          color: Colors.amber,
                           fontFamily: 'VT323',
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
@@ -92,12 +86,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ],
                 ),
 
-                // --- ANIMASI CAPSULE FLOATING ---
                 AnimatedBuilder(
                   animation: _animation,
                   builder: (context, child) {
                     return Transform.translate(
-                      offset: Offset(0, _animation.value), // Gerak vertikal
+                      offset: Offset(0, _animation.value),
                       child: child,
                     );
                   },
@@ -107,21 +100,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blueAccent.withOpacity(0.2),
+                          color: Colors.blueAccent.withValues(alpha:0.2),
                           blurRadius: 40,
                           spreadRadius: 10,
                         )
                       ],
                     ),
-                    // Menggunakan asset5 (Locked Capsule) sebagai Hero Image
                     child: Image.asset('assets/asset5.png', width: 140),
                   ),
                 ),
 
-                // --- TOMBOL MULAI & TANAH ---
                 Column(
                   children: [
-                    // Tombol Start
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -132,7 +122,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Efek bayangan tombol biar pop-up
                           Container(
                             margin: const EdgeInsets.only(top: 5),
                             width: 190,
@@ -159,25 +148,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
                     const SizedBox(height: 50),
 
-                    // Area Rumput & Tanah
                     Column(
                       children: [
                         SizedBox(
                           width: double.infinity,
                           height: 40,
                           child: Image.asset(
-                            'assets/asset8.png', // Rumput
-                            repeat: ImageRepeat.repeatX, // Mengulang secara horizontal // Repeat biar nyambung kalau layar lebar
+                            'assets/asset8.png',
+                            repeat: ImageRepeat.repeatX,
                           ),
                         ),
                         Container(
                           width: double.infinity,
-                          height: 60, // Tanah
+                          height: 60,
                           color: const Color(0xFF4E342E),
                           child: Center(
                             child: Text(
                               "v1.0.0 Buatan Irsyad Dan Hafiz",
-                              style: TextStyle(color: Colors.white.withOpacity(0.3), fontFamily: 'VT323', fontSize: 12),
+                              style: TextStyle(color: Colors.white.withValues(alpha:0.3), fontFamily: 'VT323', fontSize: 12),
                             ),
                           ),
                         ),
@@ -193,14 +181,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 
-  // Widget kecil untuk membuat bintang kotak (pixel art style)
   Widget _buildStar(double size) {
     return Container(
       width: size,
       height: size,
       decoration: const BoxDecoration(
         color: Colors.white,
-        shape: BoxShape.rectangle, // Kotak biar pixel art
+        shape: BoxShape.rectangle,
       ),
     );
   }

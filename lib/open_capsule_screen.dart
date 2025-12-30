@@ -28,8 +28,7 @@ class OpenCapsuleScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Gambar Kapsul Terbuka (Visual)
-              Image.asset('assets/asset6.png', width: 100), // Pastikan ini gambar unlocked
+              Image.asset('assets/asset6.png', width: 100),
               const SizedBox(height: 20),
 
               const Text(
@@ -43,20 +42,19 @@ class OpenCapsuleScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                dateInfo, // Contoh: Opened 2 days ago
+                dateInfo,
                 style: const TextStyle(color: Colors.grey, fontSize: 14, fontFamily: 'VT323'),
               ),
               const SizedBox(height: 30),
 
-              // Area Surat / Pesan
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(25),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1), // Warna kertas tua/krem
+                  color: const Color(0xFFFFF8E1),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(4, 4))
+                    BoxShadow(color: Colors.black.withValues(alpha:0.3), blurRadius: 10, offset: const Offset(4, 4))
                   ],
                   border: Border.all(color: const Color(0xFFD7CCC8), width: 2),
                 ),

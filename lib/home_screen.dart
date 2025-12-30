@@ -1,6 +1,7 @@
 import 'create_capsule_screen.dart';
 import 'edit_capsule_screen.dart';
-import 'login_screen.dart'; // Import login untuk logout
+import 'login_screen.dart';
+import 'open_capsule_screen.dart'; // <--- JANGAN LUPA IMPORT INI
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,121 +14,452 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Map<String, String>> myCapsules = [];
-
-  final List<Map<String, String>> unlockedHistory = [
-    {"time": "1 day ago", "image": "assets/asset6.png"},
-    {"time": "3 days ago", "image": "assets/asset6.png"},
-    {"time": "1 week ago", "image": "assets/asset6.png"},
-    {"time": "2 weeks ago", "image": "assets/asset6.png"},
+  // DATA MASTER
+  List<Map<String, dynamic>> allCapsules = [
+    {
+      "message": "Halo masa depan! Semoga kamu sudah lulus.",
+      "image": "assets/asset5.png",
+      "unlockDate": DateTime.now().add(const Duration(days: 2)).toIso8601String(),
+    },
+    {
+      "message": "Ini kenangan saat belajar Flutter pertama kali.",
+      "image": "assets/asset6.png",
+      "unlockDate": DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+    },
   ];
+
+  List<Map<String, dynamic>> lockedList = [];
+  List<Map<String, dynamic>> unlockedList = [];
+  int _selectedLockedIndex = -1;
+  int _selectedUnlockedIndex = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _organizeCapsules();
+  }
+
+  // --- PERBAIKAN LOGIKA IMAGE OTOMATIS ---
+  void _organizeCapsules() {
+    final now = DateTime.now();
+
+    setState(() {
+      lockedList.clear();
+      unlockedList.clear();
+
+      for (var capsule in allCapsules) {
+        DateTime unlockTime = DateTime.parse(capsule['unlockDate']);
+
+        // Hitung teks tampilan (Days Left / Opened Ago)
+        capsule['timeDisplay'] = _calculateTimeDisplay(unlockTime);
+
+        // LOGIKA BARU: Cek waktu untuk menentukan masuk mana & update gambarnya
+        if (unlockTime.isAfter(now)) {
+          // --- KONDISI LOCKED ---
+          capsule['image'] = "assets/asset5.png"; // Paksa jadi Gambar Locked
+          lockedList.add(capsule);
+        } else {
+          // --- KONDISI UNLOCKED ---
+          capsule['image'] = "assets/asset6.png"; // Paksa jadi Gambar Unlocked
+          unlockedList.add(capsule);
+        }
+      }
+
+      // Sorting (Urutan)
+      lockedList.sort((a, b) => DateTime.parse(a['unlockDate']).compareTo(DateTime.parse(b['unlockDate'])));
+      unlockedList.sort((a, b) => DateTime.parse(b['unlockDate']).compareTo(DateTime.parse(a['unlockDate'])));
+    });
+  }
+
+  // --- PERBAIKAN LOGIKA WAKTU (GANTI TOTAL FUNGSI INI) ---
+  String _calculateTimeDisplay(DateTime targetTime) {
+    final now = DateTime.now();
+
+    // Kita "bersihkan" jam-nya, jadi murni hitung selisih tanggal kalender
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    final targetMidnight = DateTime(targetTime.year, targetTime.month, targetTime.day);
+
+    final difference = targetMidnight.difference(todayMidnight);
+
+    if (difference.isNegative) {
+      // MASA LALU
+      final daysAgo = difference.abs().inDays;
+      if (daysAgo == 0) return "Opened Today"; // Jika hari ini tapi sudah lewat jam
+      return "Opened $daysAgo days ago";
+    } else {
+      // MASA DEPAN
+      final daysLeft = difference.inDays;
+
+      if (daysLeft == 0) {
+        // Jika harinya sama (Hari ini), kita hitung sisa jam
+        final hoursLeft = targetTime.difference(now).inHours;
+        if (hoursLeft <= 0) return "Ready to Open!";
+        return "$hoursLeft Hours Remaining";
+      }
+
+      return "$daysLeft Days Remaining";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    String cleanName = widget.username.replaceAll('@', '');
-
     return Scaffold(
       backgroundColor: const Color(0xFF222222),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // --- TOMBOL LOGOUT ---
-              Align(
-                alignment: Alignment.topRight,
-                child: IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.redAccent, size: 30),
-                  onPressed: () => _showLogoutDialog(context),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                const Text(
+                  'Digital Time Capsule',
+                  style: TextStyle(fontSize: 24, color: Colors.white, fontFamily: 'VT323', letterSpacing: 1.5),
                 ),
-              ),
-              const Text(
-                'Digital Time Capsule',
-                style: TextStyle(fontSize: 28, color: Colors.white, fontFamily: 'VT323'),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                "Halo $cleanName, Ayo Buat Surat untuk Masa Depan",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, color: Colors.grey, fontFamily: 'VT323'),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              GestureDetector(
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CreateCapsuleScreen()),
-                  );
-                  if (result != null) {
-                    setState(() { myCapsules.add(result); });
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.add_circle_outline, color: Colors.white, size: 30),
-                ),
-              ),
+                // TOMBOL ADD
+                GestureDetector(
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CreateCapsuleScreen()),
+                    );
 
-              const SizedBox(height: 40),
-
-              if (myCapsules.length > 2)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 15),
-                  child: Text(
-                    "Geser untuk melihat koleksi",
-                    style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 14),
-                  ),
-                )
-              else
-                const SizedBox(height: 15),
-
-              SizedBox(
-                height: 250,
-                child: myCapsules.isEmpty
-                    ? Center(
-                  child: Text(
-                    "Belum ada capsule locked.\nKlik (+) untuk membuat!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 18),
-                  ),
-                )
-                    : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: myCapsules.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemBuilder: (context, index) {
-                    return _buildMainCapsuleCard(index);
+                    if (result != null) {
+                      allCapsules.add({
+                        "message": result['message'],
+                        "image": "assets/asset5.png",
+                        "unlockDate": result['date'].toIso8601String(),
+                      });
+                      _organizeCapsules();
+                    }
                   },
+                  child: Container(
+                    width: double.infinity,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2D2D2D),
+                      border: Border.all(color: Colors.white),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.add_circle_outline, color: Colors.white, size: 28),
+                    ),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 50),
-              _buildUnlockedHistoryList(),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+
+                // LIST LOCKED
+                _buildCapsuleList(
+                    dataList: lockedList,
+                    selectedIndex: _selectedLockedIndex,
+                    isLockedList: true
+                ),
+
+                const SizedBox(height: 20),
+
+                // PREVIEW AREA (Updated)
+                SizedBox(
+                  height: 300,
+                  child: _buildPreviewArea(),
+                ),
+
+                const SizedBox(height: 20),
+
+                // LIST UNLOCKED
+                _buildCapsuleList(
+                    dataList: unlockedList,
+                    selectedIndex: _selectedUnlockedIndex,
+                    isLockedList: false
+                ),
+
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => _showLogoutDialog(context),
+                  child: const Text("Logout", style: TextStyle(color: Colors.redAccent, fontFamily: 'VT323')),
+                )
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // --- FUNGSI LOGOUT DIALOG ---
+  Widget _buildCapsuleList({
+    required List<Map<String, dynamic>> dataList,
+    required int selectedIndex,
+    required bool isLockedList,
+  }) {
+    return Container(
+      height: 110,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.white54),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: dataList.isEmpty
+          ? const Center(child: Text("Empty", style: TextStyle(color: Colors.white30, fontFamily: 'VT323')))
+          : ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: dataList.length,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        itemBuilder: (context, index) {
+          bool isSelected = selectedIndex == index;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isLockedList) {
+                  _selectedLockedIndex = index;
+                  _selectedUnlockedIndex = -1;
+                } else {
+                  _selectedUnlockedIndex = index;
+                  _selectedLockedIndex = -1;
+                }
+              });
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF444444) : Colors.transparent,
+                border: isSelected ? Border.all(color: Colors.white) : Border.all(color: Colors.transparent),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(dataList[index]['image']!, width: 40),
+                  const SizedBox(height: 5),
+                  Text(
+                    dataList[index]['timeDisplay'].toString().split(' ').take(2).join(' '),
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'VT323'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // --- LOGIKA UTAMA DI SINI ---
+  // --- GANTI BAGIAN INI SAJA ---
+  Widget _buildPreviewArea() {
+    Map<String, dynamic>? activeData;
+    bool isLocked = false;
+    int activeIndex = -1;
+
+    // Cek mana yang sedang dipilih
+    if (_selectedLockedIndex != -1 && _selectedLockedIndex < lockedList.length) {
+      activeData = lockedList[_selectedLockedIndex];
+      isLocked = true;
+      activeIndex = _selectedLockedIndex;
+    } else if (_selectedUnlockedIndex != -1 && _selectedUnlockedIndex < unlockedList.length) {
+      activeData = unlockedList[_selectedUnlockedIndex];
+      isLocked = false;
+      activeIndex = _selectedUnlockedIndex;
+    }
+
+    // Jika belum ada yang dipilih
+    if (activeData == null) {
+      return const Center(
+        child: Text(
+          "Pilih capsule untuk melihat detail",
+          style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 18),
+        ),
+      );
+    }
+
+    // Tentukan Warna Shadow (Biru jika Locked, Emas jika Unlocked)
+    Color glowColor = isLocked ? Colors.blueAccent : Colors.amber;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Tombol Edit (Hanya jika Locked)
+            isLocked
+                ? IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: () => _editCapsule(activeData!, activeIndex),
+            )
+                : const SizedBox(width: 48),
+
+            // --- GAMBAR CAPSULE UTAMA (INTERAKTIF) ---
+            GestureDetector(
+              onTap: () {
+                if (isLocked) {
+                  // Feedback jika masih terkunci
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Sabar ya! Belum waktunya dibuka.", style: TextStyle(fontFamily: 'VT323')),
+                      duration: Duration(seconds: 1),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                } else {
+                  // Buka surat jika sudah Unlocked
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OpenCapsuleScreen(
+                        message: activeData!['message'],
+                        dateInfo: activeData['timeDisplay'],
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  // Efek Glowing berbeda tergantung status
+                  boxShadow: [
+                    BoxShadow(
+                      color: glowColor.withOpacity(0.3),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    )
+                  ],
+                ),
+                // Animasi kecil saat ditekan bisa ditambahkan nanti, sementara image biasa
+                child: Image.asset(activeData['image']!, width: 120),
+              ),
+            ),
+
+            // Tombol Delete
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              onPressed: () => _showDeleteDialog(context, activeData!, isLocked),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        Text(
+          isLocked ? "LOCKED" : "UNLOCKED",
+          style: TextStyle(
+            color: isLocked ? Colors.white : Colors.amber, // Teks jadi emas kalau unlocked
+            fontSize: 32,
+            fontFamily: 'VT323',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white30),
+            color: Colors.black26,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            activeData['timeDisplay']!,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'VT323'),
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        // --- KETERANGAN / PETUNJUK ---
+        if (!isLocked)
+        // Keterangan untuk Unlocked
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.touch_app, color: Colors.greenAccent, size: 18),
+              SizedBox(width: 5),
+              Text(
+                "Tap capsule to read message",
+                style: TextStyle(
+                    color: Colors.greenAccent,
+                    fontFamily: 'VT323',
+                    fontSize: 16,
+                    letterSpacing: 1.2
+                ),
+              ),
+            ],
+          )
+        else
+        // Keterangan untuk Locked
+          const Text(
+            "( Waiting for the future... )",
+            style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 14, fontStyle: FontStyle.italic),
+          ),
+      ],
+    );
+  }
+
+  // --- Fungsi Edit, Delete, Logout tetap sama seperti sebelumnya ---
+  // (Saya singkat biar tidak kepanjangan di chat, tapi pastikan copy method yang lama ya)
+
+  void _editCapsule(Map<String, dynamic> capsuleData, int index) async {
+    final updatedData = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditCapsuleScreen(
+          initialMessage: capsuleData['message'],
+          initialDateDisplay: capsuleData['timeDisplay'], // Ganti nama parameter biar jelas
+          initialRawDate: capsuleData['unlockDate'],      // TAMBAHAN: Kirim tanggal asli ISO String
+        ),
+      ),
+    );
+    if (updatedData != null) {
+      setState(() {
+        allCapsules.remove(capsuleData);
+        allCapsules.add({
+          "message": updatedData['message'],
+          "image": capsuleData['image'],
+          "unlockDate": updatedData['time'] ?? capsuleData['unlockDate'],
+        });
+        _organizeCapsules();
+        _selectedLockedIndex = -1;
+      });
+    }
+  }
+
+  void _showDeleteDialog(BuildContext context, Map<String, dynamic> itemToDelete, bool isLocked) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF333333),
+        title: const Text("Delete?", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                allCapsules.remove(itemToDelete);
+                _organizeCapsules();
+                _selectedLockedIndex = -1;
+                _selectedUnlockedIndex = -1;
+              });
+              Navigator.pop(context);
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.red, fontFamily: 'VT323')),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF333333),
-        shape: RoundedRectangleBorder(
-            side: const BorderSide(color: Colors.white, width: 2),
-            borderRadius: BorderRadius.circular(10)),
         title: const Text("Logout", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
-        content: const Text("Apakah kamu yakin ingin keluar?", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -145,148 +477,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMainCapsuleCard(int index) {
-    var capsule = myCapsules[index];
-    return Container(
-      width: 250,
-      margin: const EdgeInsets.only(right: 20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              GestureDetector(
-                onTap: () async {
-                  final updatedData = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditCapsuleScreen(
-                        initialMessage: capsule['message'] ?? "",
-                        initialDate: capsule['time'] ?? "",
-                      ),
-                    ),
-                  );
-                  if (updatedData != null) {
-                    setState(() {
-                      myCapsules[index] = {
-                        "status": "Locked",
-                        "time": updatedData['time'],
-                        "message": updatedData['message'],
-                        "image": "assets/asset5.png",
-                      };
-                    });
-                  }
-                },
-                child: Image.asset('assets/asset3.png', width: 35),
-              ),
-              Image.asset(capsule['image']!, width: 90),
-              GestureDetector(
-                onTap: () => _showDeleteDialog(context, index),
-                child: Image.asset('assets/asset4.png', width: 35),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          const Text("Locked", style: TextStyle(color: Colors.white, fontSize: 22, fontFamily: 'VT323')),
-          const SizedBox(height: 5),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-            decoration: BoxDecoration(border: Border.all(color: Colors.white54)),
-            child: Text(capsule['time']!, style: const TextStyle(color: Colors.white, fontSize: 16, fontFamily: 'VT323')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUnlockedHistoryList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 20, bottom: 8),
-          child: Text("Unlocked Capsules", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
-        ),
-        Container(
-          height: 110,
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white24),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: unlockedHistory.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
-                child: Column(
-                  children: [
-                    Image.asset(unlockedHistory[index]['image']!, width: 45),
-                    const SizedBox(height: 5),
-                    Text(unlockedHistory[index]['time']!, style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'VT323')),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showDeleteDialog(BuildContext context, int index) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: const Color(0xFF333333),
-          shape: RoundedRectangleBorder(
-            side: const BorderSide(color: Colors.white, width: 2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Hapus Capsule Ini ??", style: TextStyle(color: Colors.white, fontSize: 20, fontFamily: 'VT323', decoration: TextDecoration.underline)),
-                const SizedBox(height: 20),
-                Image.asset('assets/asset5.png', width: 80),
-                const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF555555)),
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Batal", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      onPressed: () {
-                        setState(() { myCapsules.removeAt(index); });
-                        Navigator.pop(context);
-                      },
-                      child: const Text("Hapus", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
-                    ),
-                  ],
-                )
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

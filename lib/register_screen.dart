@@ -10,6 +10,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
 
   void _handleRegister() {
     String name = _nameController.text.trim();
@@ -17,55 +18,138 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String password = _passwordController.text.trim();
 
     if (name.isEmpty || username.isEmpty || password.isEmpty) {
-      _showWarning("Semua data harus diisi!");
+      _showWarning("Semua data harus diisi!", Colors.redAccent);
       return;
     }
     if (!username.startsWith('@')) {
-      _showWarning("Username harus diawali dengan tanda @");
+      _showWarning("Username harus diawali '@'", Colors.orangeAccent);
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registrasi Berhasil! Silakan Login.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registrasi Berhasil! Silakan Login.', style: TextStyle(fontFamily: 'VT323', fontSize: 16)),
+          backgroundColor: Colors.green,
+        )
+    );
     Navigator.pop(context);
   }
 
-  void _showWarning(String pesan) {
+  void _showWarning(String pesan, Color warna) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(pesan, style: const TextStyle(fontFamily: 'VT323')), backgroundColor: Colors.orange),
+      SnackBar(
+          content: Text(pesan, style: const TextStyle(fontFamily: 'VT323', fontSize: 16)),
+          backgroundColor: warna
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF222222),
+      backgroundColor: const Color(0xFF222222), // Konsisten dengan Login & Home
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 30),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Digital Time Capsule', style: TextStyle(fontSize: 32, color: Colors.white, fontFamily: 'VT323')),
-              const SizedBox(height: 40),
-              _buildTextField('Nama Lengkap', _nameController),
+              // 1. LOGO KECIL (Opsional, biar senada)
+              Image.asset('assets/asset5.png', width: 80),
+
               const SizedBox(height: 15),
-              _buildTextField('Username', _usernameController),
-              const SizedBox(height: 15),
-              _buildTextField('Password', _passwordController, isPassword: true),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  onPressed: _handleRegister,
-                  child: const Text('Register', style: TextStyle(fontSize: 24, color: Colors.white, fontFamily: 'VT323')),
+
+              const Text(
+                'BUAT AKUN BARU',
+                style: TextStyle(fontSize: 32, color: Colors.white, fontFamily: 'VT323'),
+              ),
+              const Text(
+                'Mulai perjalanan waktu digitalmu',
+                style: TextStyle(fontSize: 16, color: Colors.grey, fontFamily: 'VT323'),
+              ),
+
+              const SizedBox(height: 30),
+
+              // 2. FORM CARD (Sama seperti Login)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2D2D2D),
+                  border: Border.all(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // INPUT NAMA
+                    const Text("Nama Lengkap", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _nameController,
+                      style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
+                      decoration: _simpleInputDecoration(hint: "Nama Kamu"),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // INPUT USERNAME
+                    const Text("Username", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _usernameController,
+                      style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
+                      decoration: _simpleInputDecoration(hint: "@username"),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // INPUT PASSWORD
+                    const Text("Password", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
+                    const SizedBox(height: 5),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !_isPasswordVisible,
+                      style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
+                      decoration: _simpleInputDecoration(
+                          hint: "********",
+                          isPassword: true
+                      ),
+                    ),
+                  ],
                 ),
               ),
+
+              const SizedBox(height: 30),
+
+              // 3. TOMBOL REGISTER
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50), // Hijau Pixel Art
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    side: const BorderSide(color: Colors.white, width: 1),
+                  ),
+                  onPressed: _handleRegister,
+                  child: const Text(
+                      'DAFTAR SEKARANG',
+                      style: TextStyle(fontSize: 24, color: Colors.white, fontFamily: 'VT323')
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 20),
+
+              // 4. BACK TO LOGIN
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Sudah punya akun? Login', style: TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'VT323')),
+                child: const Text(
+                    'Sudah punya akun? Login di sini',
+                    style: TextStyle(color: Colors.white70, fontSize: 16, fontFamily: 'VT323', decoration: TextDecoration.underline)
+                ),
               ),
             ],
           ),
@@ -74,16 +158,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(String hint, TextEditingController controller, {bool isPassword = false}) {
-    return TextField(
-      controller: controller,
-      obscureText: isPassword,
-      style: const TextStyle(color: Colors.white, fontFamily: 'VT323'),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey),
-        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+  // Helper Decoration (Sama persis dengan Login Screen)
+  InputDecoration _simpleInputDecoration({required String hint, bool isPassword = false}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.white30, fontFamily: 'VT323'),
+      suffixIcon: isPassword
+          ? IconButton(
+        icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
+        onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+      )
+          : null,
+      filled: true,
+      fillColor: const Color(0xFF222222), // Input lebih gelap
+      contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+      enabledBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.white30),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.white),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }

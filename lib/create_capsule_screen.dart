@@ -29,7 +29,8 @@ class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
               onPrimary: Colors.white,
               surface: Color(0xFFFFF8E1),
               onSurface: Colors.brown,
-            ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFFFFF8E1)),
+            ),
+            dialogTheme: const DialogThemeData(backgroundColor: Color(0xFFFFF8E1)),
           ),
           child: child!,
         );
@@ -115,7 +116,11 @@ class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
                 color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(5),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(4, 4))
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(4, 4),
+                  )
                 ],
                 border: Border.all(color: const Color(0xFFD7CCC8), width: 2),
               ),

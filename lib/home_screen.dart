@@ -31,28 +31,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadCapsules() {
-    final rawData = capsuleBox.get('list');
+    final rawData = capsuleBox.get(widget.username);
 
     if (rawData != null) {
       setState(() {
         allCapsules = List<Map<String, dynamic>>.from(
-            rawData.map((item) => Map<String, dynamic>.from(item))
+            (rawData as List).map((item) => Map<String, dynamic>.from(item))
         );
         _organizeCapsules();
       });
     } else {
       allCapsules = [
         {
-          "id": "default1",
-          "message": "Halo masa depan! Semoga kamu sudah lulus.",
+          "id": "welcome_${widget.username}",
+          "message": "Halo ${widget.username}! Selamat datang di kapsul waktu digitalmu.",
           "image": "assets/asset5.png",
-          "unlockDate": DateTime.now().add(const Duration(days: 2)).toIso8601String(),
-        },
-        {
-          "id": "default2",
-          "message": "Ini contoh Capsule saja.",
-          "image": "assets/asset6.png",
-          "unlockDate": DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+          "unlockDate": DateTime.now().add(const Duration(days: 3)).toIso8601String(),
         },
       ];
       _saveCapsules();
@@ -60,10 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- PERBAIKAN: Ditambahkan async dan flush agar data permanen ---
   Future<void> _saveCapsules() async {
-    await capsuleBox.put('list', allCapsules);
-    await capsuleBox.flush(); // Memaksa data ditulis ke penyimpanan
+    await capsuleBox.put(widget.username, allCapsules);
+    await capsuleBox.flush();
   }
 
   void _organizeCapsules() {
@@ -95,7 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final todayMidnight = DateTime(now.year, now.month, now.day);
     final targetMidnight = DateTime(targetTime.year, targetTime.month, targetTime.day);
-
     final difference = targetMidnight.difference(todayMidnight);
 
     if (difference.isNegative) {
@@ -126,6 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text(
                   'Digital Time Capsule',
                   style: TextStyle(fontSize: 24, color: Colors.white, fontFamily: 'VT323', letterSpacing: 1.5),
+                ),
+                Text(
+                  'Halo ${widget.username}',
+                  style: const TextStyle(fontSize: 15, color: Colors.grey, fontFamily: 'VT323'),
                 ),
                 const SizedBox(height: 20),
 
@@ -171,9 +167,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildCapsuleList(dataList: unlockedList, selectedIndex: _selectedUnlockedIndex, isLockedList: false),
 
                 const SizedBox(height: 10),
-                TextButton(
-                  onPressed: () => _showLogoutDialog(context),
-                  child: const Text("Logout", style: TextStyle(color: Colors.redAccent, fontFamily: 'VT323')),
+
+                // --- BAGIAN TOMBOL AKSI (LOGOUT & DELETE) ---
+                Column(
+                  children: [
+                    TextButton(
+                      onPressed: () => _showLogoutDialog(context),
+                      child: const Text("Logout", style: TextStyle(color: Colors.white70, fontFamily: 'VT323')),
+                    ),
+                    TextButton(
+                      onPressed: () => _showDeleteAccountDialog(),
+                      child: const Text(
+                          "Delete Account",
+                          style: TextStyle(
+                              color: Colors.redAccent,
+                              fontFamily: 'VT323',
+                              fontSize: 14,
+                              decoration: TextDecoration.underline
+                          )
+                      ),
+                    ),
+                  ],
                 )
               ],
             ),
@@ -189,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(border: Border.all(color: Colors.white54), borderRadius: BorderRadius.circular(8)),
       child: dataList.isEmpty
-          ? const Center(child: Text("Empty", style: TextStyle(color: Colors.white30, fontFamily: 'VT323')))
+          ? const Center(child: Text("Tidak ada capsule yang dibuka", style: TextStyle(color: Colors.white30, fontFamily: 'VT323')))
           : ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: dataList.length,
@@ -349,6 +363,44 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false);
             },
             child: const Text("Keluar", style: TextStyle(color: Colors.red, fontFamily: 'VT323')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF333333),
+        title: const Text("Hapus Akun Permanen?", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
+        content: const Text(
+          "Seluruh kapsul waktu dan data pendaftaran Anda akan dihapus selamanya dari perangkat ini. Tindakan ini tidak bisa dibatalkan.",
+          style: TextStyle(color: Colors.white70, fontFamily: 'VT323'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal", style: TextStyle(color: Colors.grey, fontFamily: 'VT323')),
+          ),
+          TextButton(
+            onPressed: () async {
+              final navigator = Navigator.of(this.context);
+
+              var userBox = Hive.box('userBox');
+
+              await capsuleBox.delete(widget.username);
+              await userBox.delete(widget.username);
+
+              if (!mounted) return;
+
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+              );
+            },
+            child: const Text("Hapus Permanen", style: TextStyle(color: Colors.red, fontFamily: 'VT323', fontWeight: FontWeight.bold)),
           ),
         ],
       ),

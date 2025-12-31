@@ -76,7 +76,7 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Perubahan Disimpan!'), backgroundColor: Colors.green),
+      const SnackBar(content: Text('Perubahan Disimpan!', style: TextStyle(fontFamily: 'VT323')), backgroundColor: Colors.green),
     );
   }
 
@@ -106,9 +106,9 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                 borderRadius: BorderRadius.circular(5),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3), // PERBAIKAN SINTAKS
-                      blurRadius: 10,
-                      offset: const Offset(4, 4)
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(4, 4),
                   )
                 ],
                 border: Border.all(color: const Color(0xFFD7CCC8), width: 2),

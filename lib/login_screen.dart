@@ -13,38 +13,46 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
-  // <--- Fungsi diubah menjadi async untuk cek database Hive --->
   Future<void> _handleLogin() async {
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text.trim();
+    String usernameInput = _usernameController.text.trim();
+    String passwordInput = _passwordController.text.trim();
 
-    if (username.isEmpty || password.isEmpty) {
+    if (usernameInput.isEmpty || passwordInput.isEmpty) {
       _showWarning("Username dan Password harus diisi!", Colors.redAccent);
       return;
     }
-    if (!username.startsWith('@')) {
+    if (!usernameInput.startsWith('@')) {
       _showWarning("Username harus pakai '@'", Colors.orangeAccent);
       return;
     }
 
-    var userBox = Hive.box('userBox');
-    String? registeredUsername = userBox.get('username');
-    String? registeredPassword = userBox.get('password');
+    setState(() => _isLoading = true);
 
-    if (registeredUsername == null) {
-      _showWarning("Akun tidak ditemukan! Silakan daftar dahulu.", Colors.orangeAccent);
-      return;
-    }
+    try {
+      var userBox = Hive.box('userBox');
+      var userData = userBox.get(usernameInput);
 
-    if (username == registeredUsername && password == registeredPassword) {
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(username: username)),
-      );
-    } else {
-      _showWarning("Username atau Password salah!", Colors.redAccent);
+      if (userData == null) {
+        _showWarning("Akun tidak ditemukan! Silakan daftar dahulu.", Colors.orangeAccent);
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (passwordInput == userData['password']) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen(username: usernameInput)),
+        );
+      } else {
+        _showWarning("Username atau Password salah!", Colors.redAccent);
+      }
+    } catch (e) {
+      _showWarning("Gagal login: Kesalahan sistem", Colors.redAccent);
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // <--- MATIKAN LOADING
     }
   }
 
@@ -69,24 +77,16 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Image.asset('assets/asset5.png', width: 100),
-
               const SizedBox(height: 20),
-
               const Text(
                 'DIGITAL TIME CAPSULE',
-                style: TextStyle(
-                  fontSize: 32,
-                  color: Colors.white,
-                  fontFamily: 'VT323',
-                ),
+                style: TextStyle(fontSize: 32, color: Colors.white, fontFamily: 'VT323'),
               ),
               const Text(
                 'Masuk untuk melihat masa lalu',
                 style: TextStyle(fontSize: 16, color: Colors.grey, fontFamily: 'VT323'),
               ),
-
               const SizedBox(height: 40),
-
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -101,58 +101,48 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 5),
                     TextField(
                       controller: _usernameController,
+                      enabled: !_isLoading, // Disable saat loading
                       style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
                       decoration: _simpleInputDecoration(hint: "@username"),
                     ),
-
                     const SizedBox(height: 20),
-
                     const Text("Password", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
                     const SizedBox(height: 5),
                     TextField(
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
+                      enabled: !_isLoading, // Disable saat loading
                       style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
-                      decoration: _simpleInputDecoration(
-                          hint: "********",
-                          isPassword: true
-                      ),
+                      decoration: _simpleInputDecoration(hint: "********", isPassword: true),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF4CAF50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     side: const BorderSide(color: Colors.white, width: 1),
                   ),
-                  onPressed: _handleLogin,
-                  child: const Text(
-                      'MASUK',
-                      style: TextStyle(fontSize: 24, color: Colors.white, fontFamily: 'VT323')
-                  ),
+                  // Disable tombol jika sedang loading
+                  onPressed: _isLoading ? null : _handleLogin,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('MASUK', style: TextStyle(fontSize: 24, color: Colors.white, fontFamily: 'VT323')),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               TextButton(
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                  if (!_isLoading) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                  }
                 },
-                child: const Text(
-                  "Belum punya akun? Buat Baru",
-                  style: TextStyle(color: Colors.white70, fontSize: 16, fontFamily: 'VT323', decoration: TextDecoration.underline),
-                ),
+                child: const Text("Belum punya akun? Buat Baru", style: TextStyle(color: Colors.white70, fontSize: 16, fontFamily: 'VT323', decoration: TextDecoration.underline)),
               ),
             ],
           ),
@@ -174,15 +164,8 @@ class _LoginScreenState extends State<LoginScreen> {
       filled: true,
       fillColor: const Color(0xFF222222),
       contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-
-      enabledBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.white30),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.white),
-        borderRadius: BorderRadius.circular(4),
-      ),
+      enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.white30), borderRadius: BorderRadius.circular(4)),
+      focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Colors.white), borderRadius: BorderRadius.circular(4)),
     );
   }
 }

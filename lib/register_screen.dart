@@ -80,15 +80,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text("Privacy Policy", style: TextStyle(color: Colors.white, fontFamily: 'VT323')),
-        content: const Text(
-          "Aplikasi Digital Time Capsule menyimpan data Nama, Username, dan Password Anda secara lokal di perangkat ini menggunakan database Hive. Kami tidak mengumpulkan atau mengirimkan data Anda ke server mana pun.",
-          style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 16),
+        title: const Text("Privacy Policy",
+            style: TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 22)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: const Text(
+              "Digital Time Capsule menghargai privasi Anda. Semua data (Akun & Pesan) disimpan 100% LOKAL di HP ini menggunakan database Hive.\n\n"
+                  "1. Kami tidak mengambil data Anda ke internet.\n"
+                  "2. Data antar user dipisah secara aman.\n"
+                  "3. Anda punya hak penuh untuk menghapus akun & data melalui fitur 'Delete Account'.\n"
+                  "4. Aplikasi ini aman untuk semua umur karena tidak ada pelacakan pihak ketiga.",
+              style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 16),
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK", style: TextStyle(color: Colors.green, fontFamily: 'VT323')),
+            child: const Text("MENGERTI",
+                style: TextStyle(color: Colors.green, fontFamily: 'VT323', fontWeight: FontWeight.bold)),
           ),
         ],
       ),

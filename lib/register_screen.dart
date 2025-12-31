@@ -88,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: const Text(
               "Digital Time Capsule menghargai privasi Anda. Semua data (Akun & Pesan) disimpan 100% LOKAL di HP ini menggunakan database Hive.\n\n"
                   "1. Kami tidak mengambil data Anda ke internet.\n"
-                  "2. Data antar user dipisah secara aman.\n"
+                  "2. Data antar user dipisah secara aman dan terjamin.\n"
                   "3. Anda punya hak penuh untuk menghapus akun & data melalui fitur 'Delete Account'.\n"
                   "4. Aplikasi ini aman untuk semua umur karena tidak ada pelacakan pihak ketiga.",
               style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 16),

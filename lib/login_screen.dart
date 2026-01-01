@@ -1,5 +1,5 @@
-import 'package:digital_time_capsule/services/firebase_service.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -10,39 +10,49 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   Future<void> _handleLogin() async {
-    String emailInput = _emailController.text.trim();
+    String usernameInput = _usernameController.text.trim();
     String passwordInput = _passwordController.text.trim();
 
-    if (emailInput.isEmpty || passwordInput.isEmpty) {
-      _showWarning("Email dan Password harus diisi!", Colors.redAccent);
+    if (usernameInput.isEmpty || passwordInput.isEmpty) {
+      _showWarning("Username dan Password harus diisi!", Colors.redAccent);
+      return;
+    }
+    if (!usernameInput.startsWith('@')) {
+      _showWarning("Username harus pakai '@'", Colors.orangeAccent);
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final user = await _firebaseService.signInWithEmailAndPassword(emailInput, passwordInput);
+      var userBox = Hive.box('userBox');
+      var userData = userBox.get(usernameInput);
 
-      if (user != null) {
+      if (userData == null) {
+        _showWarning("Akun tidak ditemukan! Silakan daftar dahulu.", Colors.orangeAccent);
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (passwordInput == userData['password']) {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => HomeScreen(username: usernameInput)),
         );
       } else {
-        _showWarning("Email atau Password salah!", Colors.redAccent);
+        _showWarning("Username atau Password salah!", Colors.redAccent);
       }
     } catch (e) {
-      _showWarning("Gagal login: Terjadi kesalahan.", Colors.redAccent);
+      _showWarning("Gagal login: Kesalahan sistem", Colors.redAccent);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // <--- MATIKAN LOADING
     }
   }
 
@@ -87,14 +97,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Email", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
+                    const Text("Username", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
                     const SizedBox(height: 5),
                     TextField(
-                      controller: _emailController,
+                      controller: _usernameController,
                       enabled: !_isLoading, // Disable saat loading
                       style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
-                      decoration: _simpleInputDecoration(hint: "email@anda.com"),
-                      keyboardType: TextInputType.emailAddress,
+                      decoration: _simpleInputDecoration(hint: "@username"),
                     ),
                     const SizedBox(height: 20),
                     const Text("Password", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),

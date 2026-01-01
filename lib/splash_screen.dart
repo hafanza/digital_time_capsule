@@ -1,10 +1,5 @@
-import 'dart:async';
-import 'package:digital_time_capsule/home_screen.dart';
-import 'package:digital_time_capsule/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
-
-import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,34 +23,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _animation = Tween<double>(begin: 0, end: 15).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-
-    _navigate();
-  }
-
-  Future<void> _navigate() async {
-    // Wait for a few seconds to show the splash screen.
-    await Future.delayed(const Duration(seconds: 4));
-
-    if (!mounted) return;
-
-    // Listen to the auth state changes.
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      if (!mounted) return;
-      
-      if (user == null) {
-        // If there is no user, go to LoginScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      } else {
-        // If there is a user, go to HomeScreen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
-    });
   }
 
   @override
@@ -133,7 +100,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blueAccent.withOpacity(0.2),
+                          color: Colors.blueAccent.withValues(alpha:0.2),
                           blurRadius: 40,
                           spreadRadius: 10,
                         )
@@ -145,13 +112,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
                 Column(
                   children: [
-                    // Ganti tombol START dengan loading indicator
-                    const SizedBox(
-                      height: 60,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen())
+                        );
+                      },
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 5),
+                            width: 190,
+                            height: 50,
+                            color: Colors.black38,
+                          ),
+                          Image.asset('assets/asset2.png', width: 200),
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 5),
+                            child: Text(
+                              'START',
+                              style: TextStyle(
+                                  fontSize: 24,
+                                  color: Colors.white,
+                                  fontFamily: 'VT323',
+                                  letterSpacing: 2,
+                                  fontWeight: FontWeight.bold
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -174,7 +165,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           child: Center(
                             child: Text(
                               "v1.0.0 Buatan Irsyad Dan Hafiz",
-                              style: TextStyle(color: Colors.white.withOpacity(0.3), fontFamily: 'VT323', fontSize: 12),
+                              style: TextStyle(color: Colors.white.withValues(alpha:0.3), fontFamily: 'VT323', fontSize: 12),
                             ),
                           ),
                         ),

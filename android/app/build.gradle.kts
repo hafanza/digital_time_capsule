@@ -15,15 +15,12 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.hafizirsyad.digitaltimecapsule"
-    compileSdk = 36
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
-    // ...existing code...
-    defaultConfig {
-        applicationId = "com.hafizirsyad.digitaltimecapsule"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 36
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlin {
@@ -43,8 +40,9 @@ android {
 
     defaultConfig {
         applicationId = "com.hafizirsyad.digitaltimecapsule"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 36
+        minSdk = 21
+        targetSdk = 35
+
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

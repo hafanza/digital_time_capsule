@@ -1,4 +1,4 @@
-package com.digitaltimecapsule.digital_time_capsule
+package com.hafizirsyad.digitaltimecapsule
 
 import io.flutter.embedding.android.FlutterActivity
 

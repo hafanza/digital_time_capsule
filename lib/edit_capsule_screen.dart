@@ -1,16 +1,14 @@
+import 'package:digital_time_capsule/models/capsule.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'services/firebase_service.dart';
 
 class EditCapsuleScreen extends StatefulWidget {
-  final String initialMessage;
-  final String initialDateDisplay;
-  final String? initialRawDate;
+  final Capsule capsule;
 
   const EditCapsuleScreen({
     super.key,
-    required this.initialMessage,
-    required this.initialDateDisplay,
-    this.initialRawDate,
+    required this.capsule,
   });
 
   @override
@@ -18,33 +16,22 @@ class EditCapsuleScreen extends StatefulWidget {
 }
 
 class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  DateTime? _selectedDate;
-  bool _isOverwriting = false;
+  final FirebaseService _firebaseService = FirebaseService();
+  late TextEditingController _messageController;
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialRawDate != null) {
-      try {
-        _selectedDate = DateTime.parse(widget.initialRawDate!);
-      } catch (e) {
-        _selectedDate = null;
-      }
-    }
-
-    _messageController.addListener(() {
-      setState(() {
-        _isOverwriting = _messageController.text.isNotEmpty;
-      });
-    });
+    _messageController = TextEditingController(text: widget.capsule.message);
+    _selectedDate = widget.capsule.unlockDate;
   }
 
   Future<void> _selectDate(BuildContext context) async {
     final now = DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
+      initialDate: _selectedDate,
       firstDate: now,
       lastDate: DateTime(2100),
       builder: (context, child) {
@@ -67,17 +54,23 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
     }
   }
 
-  void _saveChanges() {
-    String finalMessage = _isOverwriting ? _messageController.text : widget.initialMessage;
+  void _saveChanges() async {
+    String message = _messageController.text.trim();
+    if (message.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pesan tidak boleh kosong!'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
 
-    Navigator.pop(context, {
-      'message': finalMessage,
-      'time': _selectedDate != null ? _selectedDate!.toIso8601String() : widget.initialRawDate,
-    });
+    await _firebaseService.updateCapsule(widget.capsule.id, message, _selectedDate);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Perubahan Disimpan!', style: TextStyle(fontFamily: 'VT323')), backgroundColor: Colors.green),
-    );
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Perubahan Disimpan!'), backgroundColor: Colors.green),
+      );
+    }
   }
 
   @override
@@ -106,7 +99,7 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                 borderRadius: BorderRadius.circular(5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black.withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(4, 4),
                   )
@@ -124,9 +117,7 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                         children: [
                           const Text("UNLOCK DATE:", style: TextStyle(color: Colors.brown, fontFamily: 'VT323', fontSize: 14)),
                           Text(
-                            _selectedDate != null
-                                ? DateFormat('dd MMM yyyy').format(_selectedDate!).toUpperCase()
-                                : "UNKNOWN DATE",
+                            DateFormat('dd MMM yyyy').format(_selectedDate).toUpperCase(),
                             style: const TextStyle(color: Colors.redAccent, fontFamily: 'VT323', fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -157,49 +148,20 @@ class _EditCapsuleScreenState extends State<EditCapsuleScreen> {
                   const SizedBox(height: 15),
                   const Divider(color: Colors.brown, thickness: 1.5),
                   const SizedBox(height: 15),
-                  if (!_isOverwriting)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Column(
-                        children: const [
-                          Icon(Icons.lock, color: Colors.grey, size: 30),
-                          SizedBox(height: 5),
-                          Text("[ CONTENT HIDDEN ]", style: TextStyle(color: Colors.grey, fontFamily: 'VT323', fontSize: 18, letterSpacing: 2)),
-                        ],
-                      ),
-                    ),
-                  const Text("OVERWRITE MESSAGE?", style: TextStyle(color: Colors.brown, fontFamily: 'VT323', fontSize: 16)),
+                  const Text("MESSAGE:", style: TextStyle(color: Colors.brown, fontFamily: 'VT323', fontSize: 16)),
                   TextField(
                     controller: _messageController,
-                    maxLines: 5,
+                    maxLines: 8,
                     style: const TextStyle(color: Colors.brown, fontSize: 18, fontFamily: 'VT323'),
                     cursorColor: Colors.brown,
                     decoration: const InputDecoration(
-                      hintText: "Type to replace old message...",
+                      hintText: "What do you want to tell to your future self?",
                       hintStyle: TextStyle(color: Colors.black26, fontFamily: 'VT323', fontStyle: FontStyle.italic),
                       filled: true,
                       fillColor: Colors.white54,
                       border: OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
                     ),
                   ),
-                  if (_isOverwriting)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
-                          SizedBox(width: 5),
-                          Text("Old message will be lost!", style: TextStyle(color: Colors.redAccent, fontFamily: 'VT323', fontSize: 14)),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),

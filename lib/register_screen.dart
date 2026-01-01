@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'package:digital_time_capsule/services/firebase_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'home_screen.dart'; // Import HomeScreen
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -8,60 +11,74 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
+  final FirebaseService _firebaseService = FirebaseService();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   Future<void> _handleRegister() async {
-    String name = _nameController.text.trim();
-    String username = _usernameController.text.trim();
+    print('[REGISTER] Tombol Daftar Ditekan.');
+    String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    if (name.isEmpty || username.isEmpty || password.isEmpty) {
-      _showWarning("Semua data harus diisi!", Colors.redAccent);
+    if (email.isEmpty || password.isEmpty) {
+      _showWarning("Email dan Password harus diisi!", Colors.redAccent);
+      print('[REGISTER] Gagal: Email atau Password kosong.');
       return;
     }
-    if (!username.startsWith('@')) {
-      _showWarning("Username harus diawali '@'", Colors.orangeAccent);
+    if (password.length < 6) {
+      _showWarning("Password minimal harus 6 karakter.", Colors.orangeAccent);
+      print('[REGISTER] Gagal: Password kurang dari 6 karakter.');
       return;
     }
 
     setState(() => _isLoading = true);
+    print('[REGISTER] Memulai proses registrasi ke Firebase...');
 
     try {
-      var userBox = Hive.box('userBox');
+      final user = await _firebaseService
+          .registerWithEmailAndPassword(email, password)
+          .timeout(const Duration(seconds: 15)); // Tambahkan timeout
+      print('[REGISTER] Panggilan Firebase selesai.');
 
-      if (userBox.containsKey(username)) {
-        _showWarning("Username $username sudah terdaftar!", Colors.redAccent);
-        setState(() => _isLoading = false);
-        return;
+      if (user != null) {
+        print('[REGISTER] Sukses! User ID: ${user.uid}. Navigasi ke HomeScreen.');
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+              (Route<dynamic> route) => false,
+        );
+      } else {
+        print('[REGISTER] Gagal: User null setelah registrasi.');
       }
-
-      await userBox.put(username, {
-        'name': name,
-        'username': username,
-        'password': password,
-      });
-
-      await userBox.flush();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registrasi Berhasil! Silakan Login.', style: TextStyle(fontFamily: 'VT323', fontSize: 16)),
-            backgroundColor: Colors.green,
-          )
-      );
-
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) Navigator.pop(context);
-
-    } catch (e) {
-      _showWarning("Terjadi kesalahan teknis!", Colors.redAccent);
+    } on FirebaseAuthException catch (e) {
+      print('[REGISTER] Error FirebaseAuth: ${e.code} - ${e.message}');
+      String errorMessage;
+      switch (e.code) {
+        case 'email-already-in-use':
+          errorMessage = 'Email ini sudah terdaftar. Silakan login.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Format email tidak valid.';
+          break;
+        case 'weak-password':
+          errorMessage = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+          break;
+        default:
+          errorMessage = 'Terjadi kesalahan autentikasi. Silakan coba lagi.';
+      }
+      _showWarning(errorMessage, Colors.redAccent);
+    } on TimeoutException {
+      print('[REGISTER] Error: Timeout setelah 15 detik.');
+      _showWarning('Server tidak merespon. Cek koneksi internet Anda.', Colors.orangeAccent);
+    }
+    catch (e) {
+      print('[REGISTER] Error tidak terduga: $e');
+      _showWarning("Terjadi kesalahan tidak terduga.", Colors.redAccent);
     } finally {
+      print('[REGISTER] Proses selesai, mengembalikan _isLoading ke false.');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -70,8 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
           content: Text(pesan, style: const TextStyle(fontFamily: 'VT323', fontSize: 16)),
-          backgroundColor: warna
-      ),
+          backgroundColor: warna),
     );
   }
 
@@ -82,15 +98,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: const Color(0xFF2D2D2D),
         title: const Text("Privacy Policy",
             style: TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 22)),
-        content: SizedBox(
+        content: const SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
-            child: const Text(
-              "Digital Time Capsule menghargai privasi Anda. Semua data (Akun & Pesan) disimpan 100% LOKAL di HP ini menggunakan database Hive.\n\n"
-                  "1. Kami tidak mengambil data Anda ke internet.\n"
-                  "2. Data antar user dipisah secara aman dan terjamin.\n"
-                  "3. Anda punya hak penuh untuk menghapus akun & data melalui fitur 'Delete Account'.\n"
-                  "4. Aplikasi ini aman untuk semua umur karena tidak ada pelacakan pihak ketiga.",
+            child: Text(
+              "Digital Time Capsule menghargai privasi Anda. Semua data (Akun & Pesan) disimpan secara aman di server Firebase (Google).\n\n"
+                  "1. Kami menggunakan autentikasi aman dari Firebase.\n"
+                  "2. Data kapsul Anda hanya bisa diakses oleh akun Anda.\n"
+                  "3. Anda punya hak penuh untuk menghapus akun & seluruh data terkait melalui fitur di dalam aplikasi.\n"
+                  "4. Kami tidak membagikan data Anda kepada pihak ketiga.",
               style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 16),
             ),
           ),
@@ -137,22 +153,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Nama Lengkap", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
+                    const Text("Email", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
                     const SizedBox(height: 5),
                     TextField(
-                      controller: _nameController,
+                      controller: _emailController,
                       enabled: !_isLoading,
                       style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
-                      decoration: _simpleInputDecoration(hint: "Tuliskan Nama Kamu"),
-                    ),
-                    const SizedBox(height: 15),
-                    const Text("Username", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
-                    const SizedBox(height: 5),
-                    TextField(
-                      controller: _usernameController,
-                      enabled: !_isLoading,
-                      style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
-                      decoration: _simpleInputDecoration(hint: "@username"),
+                      decoration: _simpleInputDecoration(hint: "email@anda.com"),
+                      keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 15),
                     const Text("Password", style: TextStyle(color: Colors.white70, fontFamily: 'VT323', fontSize: 18)),
@@ -162,7 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       obscureText: !_isPasswordVisible,
                       enabled: !_isLoading,
                       style: const TextStyle(color: Colors.white, fontFamily: 'VT323', fontSize: 20),
-                      decoration: _simpleInputDecoration(hint: "********", isPassword: true),
+                      decoration: _simpleInputDecoration(hint: "minimal 6 karakter", isPassword: true),
                     ),
                   ],
                 ),

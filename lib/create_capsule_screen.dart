@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'services/firebase_service.dart'; // 1. Import FirebaseService
 
 class CreateCapsuleScreen extends StatefulWidget {
   const CreateCapsuleScreen({super.key});
@@ -9,6 +10,7 @@ class CreateCapsuleScreen extends StatefulWidget {
 }
 
 class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
+  final FirebaseService _firebaseService = FirebaseService(); // 2. Buat instance
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDate;
 
@@ -44,7 +46,8 @@ class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
     }
   }
 
-  void _validateAndCreate() {
+  // 3. Ubah fungsi ini untuk menyimpan ke Firebase
+  void _validateAndCreate() async { // Jadi async
     String message = _messageController.text.trim();
 
     if (message.isEmpty) {
@@ -57,19 +60,19 @@ class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
         ),
       );
     } else {
-      Map<String, dynamic> newCapsule = {
-        "id": DateTime.now().millisecondsSinceEpoch.toString(),
-        "message": message,
-        "date": _selectedDate,
-      };
-      Navigator.pop(context, newCapsule);
+      // Panggil service untuk menambah data
+      await _firebaseService.addCapsule(message, _selectedDate!);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Capsule berhasil disegel!', style: TextStyle(fontFamily: 'VT323')),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Setelah berhasil, kembali ke halaman sebelumnya
+      if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Capsule berhasil disegel!', style: TextStyle(fontFamily: 'VT323')),
+              backgroundColor: Colors.green,
+            ),
+          );
+      }
     }
   }
 
@@ -117,7 +120,7 @@ class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
                 borderRadius: BorderRadius.circular(5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black.withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(4, 4),
                   )

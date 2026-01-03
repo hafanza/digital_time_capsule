@@ -40,7 +40,7 @@ android {
 
     defaultConfig {
         applicationId = "com.hafizirsyad.digitaltimecapsule"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
 
         versionCode = flutter.versionCode
